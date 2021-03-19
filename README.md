@@ -12,7 +12,7 @@ pip install -r requirements.txt
 
 ## Running
 ``` bash
-python -m scripts.run
+python -m scripts.hybrid
 ```
 
 ## Dataset

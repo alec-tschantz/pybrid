@@ -77,15 +77,26 @@ class HybridModel(BaseModel):
         for l in range(self.num_nodes):
             self.mus[l] = mus[l].clone()
 
-    def train_batch(self, img_batch, label_batch, num_iters=20, fixed_preds=False):
+    def backward_mu(self):
+        for l in range(1, self.num_layers):
+            self.mus[l] = self.layers[l - 1].forward(self.mus[l - 1])
+
+    def train_batch(self, img_batch, label_batch, num_iters=20, fixed_preds=False, use_amort=True):
         self.reset()
-        self.set_img_batch_amort(img_batch)
-        self.forward_mu()
+        if use_amort:
+            self.set_img_batch_amort(img_batch)
+            self.forward_mu()
+            self.set_img_batch(img_batch) 
+        else:
+            self.set_label_batch(label_batch)
+            self.backward_mu()
+            self.set_img_batch(img_batch)
+
         self.set_label_batch(label_batch)
-        self.set_img_batch(img_batch)
         self.train_updates(num_iters, fixed_preds=fixed_preds)
         self.update_grads()
-        self.update_amort_grads()
+        if use_amort:
+            self.update_amort_grads()
 
     def test_batch(
         self, img_batch, num_iters=100, init_std=0.05, fixed_preds=False, use_amort=True
@@ -147,7 +158,10 @@ class HybridModel(BaseModel):
             self.amort_layers[l].update_gradient(self.q_errs[l + 1])
 
     def get_loss(self):
-        return torch.sum(self.errs[-1] ** 2).item()
+        try:
+            return torch.sum(self.errs[-1] ** 2).item(), torch.sum(self.q_errs[-1] ** 2).item()
+        except:
+            return torch.sum(self.errs[-1] ** 2).item(), 0
 
     @property
     def params(self):

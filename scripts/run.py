@@ -11,8 +11,11 @@ from pybrid.models.hybrid import HybridModel
 
 def main(cfg):
     utils.setup_logging()
+    cfg.exp.log_dir = utils.setup_logdir(cfg.exp.log_dir, cfg.exp.seed)
     utils.seed(cfg.exp.seed)
     pprint.pprint(cfg)
+    logging.info(f"using {utils.get_device()}")
+    utils.save_json(cfg, cfg.exp.log_dir + "/config.json")
 
     train_dataset = datasets.MNIST(
         train=True,
@@ -28,7 +31,7 @@ def main(cfg):
     )
     train_loader = datasets.get_dataloader(train_dataset, cfg.optim.batch_size)
     test_loader = datasets.get_dataloader(test_dataset, cfg.optim.batch_size)
-    msg = f"Loaded MNIST dataset (train {len(train_loader)} test {len(test_loader)})"
+    msg = f"Loaded MNIST ({len(train_loader)} train batches {len(test_loader)} test batches)"
     logging.info(msg)
 
     model = HybridModel(
@@ -51,16 +54,17 @@ def main(cfg):
     logging.info(f"Loaded model {model}")
 
     with torch.no_grad():
-        # metrics = {"acc": [], "pc_acc": [], "amortised_acc": []}
+        metrics = {"hybrid_acc": [], "pc_acc": [], "amort_acc": []}
         for epoch in range(1, cfg.exp.num_epochs + 1):
-
-            logging.info(f"Train @ epoch {epoch} ({len(train_loader)} batches)")
+            pc_losses, amort_losses = [], []
+            logging.info(f"=== Train @ epoch {epoch} ({len(train_loader)} batches) ===")
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
                 model.train_batch(
                     img_batch,
                     label_batch,
                     cfg.infer.num_train_iters,
                     fixed_preds=cfg.infer.fixed_preds_train,
+                    use_amort=cfg.model.train_amortised,
                 )
                 optimizer.step(
                     curr_epoch=epoch,
@@ -69,18 +73,28 @@ def main(cfg):
                     batch_size=img_batch.size(0),
                 )
 
+                pc_loss, amort_loss = model.get_loss()
+                pc_losses.append(pc_loss)
+                amort_losses.append(amort_loss)
+
                 if batch_id % 100 == 0:
-                    logging.info(f"batch [{batch_id}/{len(train_loader)}] loss {model.get_loss()}")
+                    pc_loss = sum(pc_losses) / (batch_id + 1)
+                    amort_loss = sum(amort_losses) / (batch_id + 1)
+                    msg = f"batch [{batch_id}/{len(train_loader)}]: pc [{pc_loss:.4f}] amortised [{amort_loss:.4f}]"
+                    logging.info(msg)
 
             if epoch % cfg.exp.test_every == 0:
-                logging.info(f"=== Test @ epoch {epoch} === ")
-                acc, pc_acc, q_acc = 0, 0, 0
+                logging.info(f"=== Test @ epoch {epoch} ({len(test_loader)} batches) === ")
+                hybrid_acc, pc_acc, amort_acc = 0, 0, 0
                 for _, (img_batch, label_batch) in enumerate(test_loader):
+
+                    # Test hybrid inference
                     label_preds = model.test_batch(
                         img_batch, cfg.infer.num_test_iters, fixed_preds=cfg.infer.fixed_preds_test
                     )
-                    acc = acc + datasets.accuracy(label_preds, label_batch)
+                    hybrid_acc = hybrid_acc + datasets.accuracy(label_preds, label_batch)
 
+                    # Test predictive coing
                     label_preds = model.test_batch(
                         img_batch,
                         cfg.infer.num_test_iters,
@@ -90,23 +104,24 @@ def main(cfg):
                     )
                     pc_acc = pc_acc + datasets.accuracy(label_preds, label_batch)
 
+                    # Test amortised inference
                     label_preds = model.forward(img_batch)
-                    q_acc = datasets.accuracy(label_preds, label_batch)
+                    amort_acc = amort_acc + datasets.accuracy(label_preds, label_batch)
 
-                acc = acc / len(test_loader)
+                hybrid_acc = hybrid_acc / len(test_loader)
                 pc_acc = pc_acc / len(test_loader)
-                q_acc = q_acc / len(test_loader)
-                # metrics["acc"].append(acc)
-                # metrics["pc_acc"].append(pc_acc)
-                # metrics["q_acc"].append(q_acc)
-                msg = "accuracy: {:.4f} pc accuracy {:.4f} amortised accuracy {:.4f} "
-                logging.info(msg.format(acc, pc_acc, q_acc))
+                amort_acc = amort_acc / len(test_loader)
+                metrics["hybrid_acc"].append(hybrid_acc)
+                metrics["pc_acc"].append(pc_acc)
+                metrics["amort_acc"].append(amort_acc)
+                msg = "hybrid accuracy: {:.4f} pc accuracy {:.4f} amortised accuracy {:.4f} "
+                logging.info(msg.format(hybrid_acc, pc_acc, amort_acc))
 
                 _, label_batch = next(iter(test_loader))
                 img_preds = model.backward(label_batch)
-                datasets.plot_imgs(img_preds, cfg.exp.img_path + f"/{epoch}.png")
+                datasets.plot_imgs(img_preds, cfg.exp.log_dir + f"/{epoch}.png")
 
-            # utils.save_json(metrics, cfg.logdir + "metrics.json")
+            utils.save_json(metrics, cfg.exp.log_dir + "/metrics.json")
 
 
 if __name__ == "__main__":

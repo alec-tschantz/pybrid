@@ -112,6 +112,9 @@ class Adam(Optimizer):
             t = (curr_epoch) * n_batches + curr_batch
 
             for p, param in enumerate(self._params):
+                if param.grad["weights"] is None:
+                    continue
+
                 _lr = self.amort_lr if param.is_amortised else self.lr
                 self.scale_batch(param, batch_size)
                 self.clip_grads(param)

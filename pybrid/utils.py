@@ -1,3 +1,4 @@
+import os
 import logging
 import random
 import json
@@ -37,6 +38,38 @@ def to_attr_dict(_dict):
             v = to_attr_dict(v)
         attr_dict[k] = v
     return attr_dict
+
+
+def setup_logdir(dir_name, seed):
+    seed_dir_name = dir_name + "/" + str(seed)
+    os.makedirs(seed_dir_name, exist_ok=True)
+    return seed_dir_name
+
+
+def seed(seed):
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+
+def set_tensor(tensor):
+    return tensor.to(get_device()).float()
+
+
+def flatten_array(array):
+    return torch.flatten(torch.cat(array, dim=1))
+
+
+def save_json(obj, path):
+    with open(path, "w") as file:
+        json.dump(obj, file)
+
+
+def load_json(path):
+    with open(path) as file:
+        return json.load(file)
 
 
 def get_act_fn(act_fn):
@@ -85,29 +118,3 @@ class Tanh(Activation):
 
     def deriv(self, inp):
         return 1.0 - torch.tanh(inp) ** 2.0
-
-
-def seed(seed):
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-
-def set_tensor(tensor):
-    return tensor.to(get_device()).float()
-
-
-def flatten_array(array):
-    return torch.flatten(torch.cat(array, dim=1))
-
-
-def save_json(obj, path):
-    with open(path, "w") as file:
-        json.dump(obj, file)
-
-
-def load_json(path):
-    with open(path) as file:
-        return json.load(file)

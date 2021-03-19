@@ -1,13 +1,13 @@
 {
   "exp": {
+    "log_dir": "output/test",
     "seed": 0,
     "num_epochs": 20,
-    "test_every": 1,
-    "img_path": "output"
+    "test_every": 1
   },
   "data": {
-    "train_size": 3000,
-    "test_size": 100,
+    "train_size": 5000,
+    "test_size": 2000,
     "label_scale": 0.94,
     "normalize": true
   },
@@ -22,6 +22,7 @@
   "model": {
     "nodes": [10, 500, 500, 784],
     "amort_nodes": [784, 500, 500, 10],
+    "train_amortised": true,
     "use_bias": true,
     "kaiming_init": false,
     "act_fn": "tanh"
