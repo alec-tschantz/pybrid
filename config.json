@@ -1,0 +1,38 @@
+{
+  "exp": {
+    "seed": 0,
+    "num_epochs": 20,
+    "test_every": 1,
+    "img_path": "output"
+  },
+  "data": {
+    "train_size": 3000,
+    "test_size": 100,
+    "label_scale": 0.94,
+    "normalize": true
+  },
+  "infer": {
+    "mu_dt": 0.01,
+    "num_train_iters": 50,
+    "num_test_iters": 200,
+    "fixed_preds_train": false,
+    "fixed_preds_test": false,
+    "init_std": 0.01
+  },
+  "model": {
+    "nodes": [10, 500, 500, 784],
+    "amort_nodes": [784, 500, 500, 10],
+    "use_bias": true,
+    "kaiming_init": false,
+    "act_fn": "tanh"
+  },
+  "optim": {
+    "name": "Adam",
+    "lr": 1e-4,
+    "amort_lr": 1e-4,
+    "batch_size": 64,
+    "batch_scale": true,
+    "grad_clip": 50,
+    "weight_decay": null
+  }
+}
