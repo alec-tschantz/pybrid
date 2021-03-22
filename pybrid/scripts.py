@@ -103,23 +103,25 @@ def main(cfg):
                 logging.info(f"test @ epoch {epoch} ({len(test_loader)} batches)")
                 hybrid_acc, pc_acc, amort_acc, num_test_iters, num_test_iters_pc = 0, 0, 0, [], []
                 for _, (img_batch, label_batch) in enumerate(test_loader):
-                    
+
                     if cfg.exp.test_hybrid:
                         label_preds, num_test_iter = model.test_batch(
-                            img_batch, cfg.infer.num_test_iters, fixed_preds=cfg.infer.fixed_preds_test
+                            img_batch,
+                            cfg.infer.num_test_iters,
+                            fixed_preds=cfg.infer.fixed_preds_test,
                         )
                         hybrid_acc = hybrid_acc + datasets.accuracy(label_preds, label_batch)
                         num_test_iters.append(num_test_iter)
 
-                    label_preds, num_test_iter_pc = model.test_batch(
-                        img_batch,
-                        cfg.infer.num_test_iters,
-                        init_std=cfg.infer.init_std,
-                        fixed_preds=cfg.infer.fixed_preds_test,
-                        use_amort=False,
-                    )
-
                     if cfg.exp.test_pc:
+                        label_preds, num_test_iter_pc = model.test_batch(
+                            img_batch,
+                            cfg.infer.num_test_iters,
+                            init_std=cfg.infer.init_std,
+                            fixed_preds=cfg.infer.fixed_preds_test,
+                            use_amort=False,
+                        )
+
                         pc_acc = pc_acc + datasets.accuracy(label_preds, label_batch)
                         num_test_iters_pc.append(num_test_iter_pc)
 

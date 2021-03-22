@@ -149,7 +149,6 @@ class HybridModel(BaseModel):
 
             avg_loss = self.get_loss()[0] / self.total_params
             if self.train_thresh is not None and avg_loss < self.train_thresh:
-                logging.info(f"Broke @ {itr} during training")
                 break
 
         return itr

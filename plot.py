@@ -48,16 +48,17 @@ def set_axes(ax, num_epochs, x_label=None, y_label=None, x_lim=None, y_lim=None)
     plt.xticks(np.arange(0, num_epochs + 1, 5), np.arange(0, num_epochs + 1, 5))
 
 
-def plot_hybrid_metrics():
-    path = "results/hybrid"
-    seeds = [0, 1, 2, 3]
+def plot_hybrid_metrics(hyb_path, pc_path):
+    seeds = [0, 1, 2]
     hybrid_accs, pc_accs, amort_accs = [], [], []
     for seed in seeds:
-        seed_path = path + "/" + str(seed)
-        metrics = utils.load_json(seed_path + "/metrics.json")
-        hybrid_accs.append(metrics["hybrid_acc"])
-        pc_accs.append(metrics["pc_acc"])
-        amort_accs.append(metrics["amort_acc"])
+        hyb_seed_path = hyb_path + "/" + str(seed)
+        pc_path = hyb_path + "/" + str(seed)
+        hyb_metrics = utils.load_json(hyb_seed_path + "/metrics.json")
+        pc_metrics = utils.load_json(pc_path + "/metrics.json")
+        hybrid_accs.append(hyb_metrics["hybrid_acc"])
+        pc_accs.append(pc_metrics["pc_acc"])
+        amort_accs.append(hyb_metrics["amort_acc"])
 
     hyb_mean, _, hyb_upper, hyb_lower = get_mean_std(hybrid_accs)
     pc_mean, _, pc_upper, pc_lower = get_mean_std(pc_accs)
@@ -73,4 +74,6 @@ def plot_hybrid_metrics():
 
 
 if __name__ == "__main__":
-    plot_hybrid_metrics()
+    hyb_path = "results/hybrid"
+    pc_path = "results/predcoding"
+    plot_hybrid_metrics(hyb_path, pc_path)
