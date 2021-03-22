@@ -1,3 +1,5 @@
+import logging
+
 import torch
 
 from pybrid import utils
@@ -6,13 +8,26 @@ from pybrid.layers import FCLayer
 
 
 class HybridModel(BaseModel):
-    def __init__(self, nodes, amort_nodes, act_fn, mu_dt=0.01, use_bias=False, kaiming_init=False):
+    def __init__(
+        self,
+        nodes,
+        amort_nodes,
+        act_fn,
+        train_thresh=None,
+        test_thresh=None,
+        mu_dt=0.01,
+        use_bias=False,
+        kaiming_init=False,
+    ):
         self.nodes = nodes
         self.amort_nodes = amort_nodes
         self.mu_dt = mu_dt
+        self.train_thresh = train_thresh
+        self.test_thresh = test_thresh
 
         self.num_nodes = len(nodes)
         self.num_layers = len(nodes) - 1
+        self.total_params = 0
 
         self.layers = []
         self.amort_layers = []
@@ -26,6 +41,7 @@ class HybridModel(BaseModel):
                 kaiming_init=kaiming_init,
             )
             self.layers.append(layer)
+            self.total_params = self.total_params + (nodes[l] * nodes[l + 1]) + nodes[l + 1]
 
             # TODO use same layer_act_fn ?
             amort_layer = FCLayer(
@@ -95,10 +111,11 @@ class HybridModel(BaseModel):
             self.set_img_batch(img_batch)
 
         self.set_label_batch(label_batch)
-        self.train_updates(num_iters, fixed_preds=fixed_preds)
+        num_iter = self.train_updates(num_iters, fixed_preds=fixed_preds)
         self.update_grads()
         if use_amort:
             self.update_amort_grads()
+        return num_iter
 
     def test_batch(
         self, img_batch, num_iters=100, init_std=0.05, fixed_preds=False, use_amort=True
@@ -111,15 +128,16 @@ class HybridModel(BaseModel):
             self.reset_mu(img_batch.size(0), init_std)
 
         self.set_img_batch(img_batch)
-        self.test_updates(num_iters, fixed_preds=fixed_preds)
-        return self.mus[0]
+        num_iter = self.test_updates(num_iters, fixed_preds=fixed_preds)
+        return self.mus[0], num_iter
 
     def train_updates(self, num_iters, fixed_preds=False):
         for n in range(1, self.num_nodes):
             self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
             self.errs[n] = self.mus[n] - self.preds[n]
 
-        for _ in range(num_iters):
+        itr = 0
+        for itr in range(num_iters):
             for l in range(1, self.num_layers):
                 delta = self.layers[l].backward(self.errs[l + 1]) - self.errs[l]
                 self.mus[l] = self.mus[l] + self.mu_dt * (2 * delta)
@@ -128,14 +146,21 @@ class HybridModel(BaseModel):
                 if not fixed_preds:
                     self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
                 self.errs[n] = self.mus[n] - self.preds[n]
-        # TODO check convergence
+
+            avg_loss = self.get_loss()[0] / self.total_params
+            if self.train_thresh is not None and avg_loss < self.train_thresh:
+                logging.info(f"Broke @ {itr} during training")
+                break
+
+        return itr
 
     def test_updates(self, num_iters, fixed_preds):
         for n in range(1, self.num_nodes):
             self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
             self.errs[n] = self.mus[n] - self.preds[n]
 
-        for _ in range(num_iters):
+        itr = 0
+        for itr in range(num_iters):
             delta = self.layers[0].backward(self.errs[1])
             self.mus[0] = self.mus[0] + self.mu_dt * (2 * delta)
             for l in range(1, self.num_layers):
@@ -146,6 +171,11 @@ class HybridModel(BaseModel):
                 if not fixed_preds:
                     self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
                 self.errs[n] = self.mus[n] - self.preds[n]
+
+            if self.test_thresh is not None and self.get_loss()[0] < self.test_thresh:
+                break
+
+        return itr
 
     def update_grads(self):
         for l in range(self.num_layers):

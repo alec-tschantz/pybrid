@@ -109,10 +109,10 @@ class CIFAR100(datasets.CIFAR100):
 
 class SplitMNIST(datasets.MNIST):
     def __init__(
-        self, train, path="./data/split", size=None, scale=None, normalize=False, labels=None
+        self, train, path="./data", size=None, scale=None, normalize=False, labels=None
     ):
         transform = _get_transform(normalize=normalize, mean=(0.1307), std=(0.3081))
-        super().__init__(path, download=True, transform=transform, train=train)
+        super().__init__(path, download=False, transform=transform, train=train)
         self.scale = scale
         if size is not None:
             self._reduce(size)
