@@ -2,11 +2,11 @@ from pybrid import utils
 
 cfg = {
     "exp": {"log_dir": "results/test", "seed": 0, "num_epochs": 20, "test_every": 1},
-    "data": {"train_size": 1000, "test_size": 100, "label_scale": 0.94, "normalize": True},
+    "data": {"train_size": None, "test_size": None, "label_scale": 0.94, "normalize": True},
     "infer": {
         "mu_dt": 0.01,
         "num_train_iters": 100,
-        "num_test_iters": 1000,
+        "num_test_iters": 500,
         "fixed_preds_train": False,
         "fixed_preds_test": False,
         "init_std": 0.01,
