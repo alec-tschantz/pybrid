@@ -7,6 +7,7 @@ from torchvision import datasets, transforms
 
 from pybrid import utils
 
+
 class MNIST(datasets.MNIST):
     def __init__(self, train, path="./data", size=None, scale=None, normalize=False):
         transform = _get_transform(normalize=normalize, mean=(0.1307), std=(0.3081))
@@ -158,6 +159,8 @@ class FashionMNIST(datasets.FashionMNIST):
 
 def download_mnist(data_dir="data"):
     if not os.path.exists(data_dir + "/MNIST"):
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir, exist_ok=True)
         utils.run_mnist_dl(data_dir)
 
 
