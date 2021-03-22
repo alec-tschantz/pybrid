@@ -61,6 +61,7 @@ def run_mnist_dl(data_dir):
              mv MNIST {data_dir}/MNIST
              rm MNIST.tar.gz
         """
+    logging.info(f"Downloading MNIST into {data_dir}/MNIST...")
     subprocess.run(cmd, shell=True)
 
 
