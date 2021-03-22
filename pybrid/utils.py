@@ -1,4 +1,5 @@
 import os
+import pprint
 import subprocess
 import logging
 import random
@@ -18,6 +19,17 @@ def get_device():
     return _device
 
 
+def setup_experiment(cfg):
+    cfg = to_attr_dict(cfg)
+    setup_logging()
+    cfg.exp.log_dir, cfg.exp.img_dir = setup_logdirs(cfg.exp.log_dir, cfg.exp.seed)
+    seed(cfg.exp.seed)
+    logging.info(f"Starting experiment @ {cfg.exp.log_dir} [{get_device()}]")
+    pprint.pprint(cfg)
+    save_json(cfg, cfg.exp.log_dir + "/config.json")
+    return cfg
+
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
@@ -26,10 +38,12 @@ def setup_logging():
     )
 
 
-def load_config(path):
-    with open(path) as f:
-        config = json.load(f)
-    return to_attr_dict(config)
+def setup_logdirs(dir_name, seed):
+    seed_dir_name = dir_name + "/" + str(seed)
+    img_seed_dir_name = dir_name + "/" + str(seed) + "/imgs"
+    os.makedirs(seed_dir_name, exist_ok=True)
+    os.makedirs(img_seed_dir_name, exist_ok=True)
+    return seed_dir_name, img_seed_dir_name
 
 
 def to_attr_dict(_dict):
@@ -55,16 +69,6 @@ def seed(seed):
     random.seed(seed)
 
 
-def run_mnist_dl(data_dir):
-    cmd = f"""curl https://www.di.ens.fr/~lelarge/MNIST.tar.gz -o MNIST.tar.gz
-             tar -zxvf MNIST.tar.gz
-             mv MNIST {data_dir}/MNIST
-             rm MNIST.tar.gz
-        """
-    logging.info(f"Downloading MNIST into {data_dir}/MNIST...")
-    subprocess.run(cmd, shell=True)
-
-
 def set_tensor(tensor):
     return tensor.to(get_device()).float()
 
@@ -81,6 +85,16 @@ def save_json(obj, path):
 def load_json(path):
     with open(path) as file:
         return json.load(file)
+
+
+def run_mnist_dl(data_dir):
+    cmd = f"""curl https://www.di.ens.fr/~lelarge/MNIST.tar.gz -o MNIST.tar.gz
+             tar -zxvf MNIST.tar.gz
+             mv MNIST {data_dir}/MNIST
+             rm MNIST.tar.gz
+        """
+    logging.info(f"Downloading MNIST into {data_dir}/MNIST...")
+    subprocess.run(cmd, shell=True)
 
 
 def get_act_fn(act_fn):
