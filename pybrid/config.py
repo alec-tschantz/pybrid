@@ -1,7 +1,15 @@
 from pybrid import utils
 
 cfg = {
-    "exp": {"log_dir": "results/test", "seed": 0, "num_epochs": 20, "test_every": 1},
+    "exp": {
+        "log_dir": "results/test",
+        "seed": 0,
+        "num_epochs": 20,
+        "test_every": 1,
+        "test_hybrid": False,
+        "test_pc": False,
+        "test_amort": False,
+    },
     "data": {"train_size": None, "test_size": None, "label_scale": 0.94, "normalize": True},
     "infer": {
         "mu_dt": 0.01,
