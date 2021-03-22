@@ -147,8 +147,8 @@ class HybridModel(BaseModel):
                     self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
                 self.errs[n] = self.mus[n] - self.preds[n]
 
-            avg_loss = self.get_loss()[0] / self.total_params
-            if self.train_thresh is not None and avg_loss < self.train_thresh:
+            avg_err = self.get_errors() / self.total_params
+            if self.train_thresh is not None and avg_err < self.train_thresh:
                 break
 
         return itr
@@ -171,7 +171,8 @@ class HybridModel(BaseModel):
                     self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
                 self.errs[n] = self.mus[n] - self.preds[n]
 
-            if self.test_thresh is not None and self.get_loss()[0] < self.test_thresh:
+            avg_err = self.get_errors() / self.total_params
+            if self.test_thresh is not None and avg_err < self.test_thresh:
                 break
 
         return itr
@@ -186,6 +187,12 @@ class HybridModel(BaseModel):
 
         for l in range(self.num_layers):
             self.amort_layers[l].update_gradient(self.q_errs[l + 1])
+
+    def get_errors(self):
+        total_err = 0
+        for err in self.errs:
+            total_err = total_err + torch.sum(err ** 2).item()
+        return total_err
 
     def get_loss(self):
         try:
