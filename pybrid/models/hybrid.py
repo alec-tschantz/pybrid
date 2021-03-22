@@ -191,7 +191,10 @@ class HybridModel(BaseModel):
     def get_errors(self):
         total_err = 0
         for err in self.errs:
-            total_err = total_err + torch.sum(err ** 2).item()
+            try:
+                total_err = total_err + torch.sum(err ** 2).item()
+            except:
+                total_err = total_err
         return total_err
 
     def get_loss(self):
