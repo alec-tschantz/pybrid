@@ -1,4 +1,5 @@
 import os
+import subprocess
 import logging
 import random
 import json
@@ -52,6 +53,15 @@ def seed(seed):
         torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
+
+
+def run_mnist_dl(data_dir):
+    cmd = f"""curl https://www.di.ens.fr/~lelarge/MNIST.tar.gz -o MNIST.tar.gz
+             tar -zxvf MNIST.tar.gz
+             mv MNIST {data_dir}/MNIST
+             rm MNIST.tar.gz
+        """
+    subprocess.run(cmd, shell=True)
 
 
 def set_tensor(tensor):

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -6,11 +7,10 @@ from torchvision import datasets, transforms
 
 from pybrid import utils
 
-
 class MNIST(datasets.MNIST):
     def __init__(self, train, path="./data", size=None, scale=None, normalize=False):
         transform = _get_transform(normalize=normalize, mean=(0.1307), std=(0.3081))
-        super().__init__(path, download=True, transform=transform, train=train)
+        super().__init__(path, download=False, transform=transform, train=train)
         self.scale = scale
         if size is not None:
             self._reduce(size)
@@ -154,6 +154,11 @@ class FashionMNIST(datasets.FashionMNIST):
     def _reduce(self, size):
         self.data = self.data[0:size]
         self.targets = self.targets[0:size]
+
+
+def download_mnist(data_dir="data"):
+    if not os.path.exists(data_dir + "/MNIST"):
+        utils.run_mnist_dl(data_dir)
 
 
 def get_dataloader(dataset, batch_size):

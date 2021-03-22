@@ -17,6 +17,7 @@ def main(cfg):
     logging.info(f"using {utils.get_device()}")
     utils.save_json(cfg, cfg.exp.log_dir + "/config.json")
 
+    datasets.download_mnist()
     train_dataset = datasets.MNIST(
         train=True,
         scale=cfg.data.label_scale,
