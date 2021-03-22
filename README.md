@@ -9,3 +9,6 @@ To install the relevant packages:
 ```bash
 pip install -r requirements.txt
 ```
+
+## Running
+See the provided notebooks. These have been setup to be run with `colab` or locally.
