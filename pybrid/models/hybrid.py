@@ -38,6 +38,8 @@ class HybridModel(BaseModel):
             )
             self.amort_layers.append(amort_layer)
 
+        self.mean_weights, self.mean_biases = self.get_weight_stats()
+
     def reset(self):
         self.preds = [[] for _ in range(self.num_nodes)]
         self.errs = [[] for _ in range(self.num_nodes)]
@@ -86,7 +88,7 @@ class HybridModel(BaseModel):
         if use_amort:
             self.set_img_batch_amort(img_batch)
             self.forward_mu()
-            self.set_img_batch(img_batch) 
+            self.set_img_batch(img_batch)
         else:
             self.set_label_batch(label_batch)
             self.backward_mu()
@@ -126,7 +128,6 @@ class HybridModel(BaseModel):
                 if not fixed_preds:
                     self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
                 self.errs[n] = self.mus[n] - self.preds[n]
-
         # TODO check convergence
 
     def test_updates(self, num_iters, fixed_preds):
@@ -162,6 +163,21 @@ class HybridModel(BaseModel):
             return torch.sum(self.errs[-1] ** 2).item(), torch.sum(self.q_errs[-1] ** 2).item()
         except:
             return torch.sum(self.errs[-1] ** 2).item(), 0
+
+    def get_weight_stats(self):
+        mean_abs_weights = []
+        mean_abs_biases = []
+        for l in range(self.num_layers):
+            mean_abs_weights.append(torch.mean(torch.abs(self.layers[l].weights)).item())
+            mean_abs_biases.append(torch.mean(torch.abs(self.layers[l].bias)).item())
+        return mean_abs_weights, mean_abs_biases
+
+    def normalize_weights(self):
+        for l in range(self.n_layers):
+            mean_weights = torch.mean(torch.abs(self.layers[l].weights))
+            self.layers[l].weights = self.layers[l].weights * self.mean_weights[l] / mean_weights
+            mean_bias = torch.mean(torch.abs(self.layers[l].bias))
+            self.layers[l].bias = self.layers[l].bias * self.mean_biases[l] / mean_bias
 
     @property
     def params(self):
