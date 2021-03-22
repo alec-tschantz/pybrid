@@ -173,7 +173,7 @@ class HybridModel(BaseModel):
         return mean_abs_weights, mean_abs_biases
 
     def normalize_weights(self):
-        for l in range(self.n_layers):
+        for l in range(self.num_layers):
             mean_weights = torch.mean(torch.abs(self.layers[l].weights))
             self.layers[l].weights = self.layers[l].weights * self.mean_weights[l] / mean_weights
             mean_bias = torch.mean(torch.abs(self.layers[l].bias))
