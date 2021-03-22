@@ -8,7 +8,7 @@ cfg = {
         "test_every": 1,
         "test_hybrid": False,
         "test_pc": False,
-        "test_amort": False,
+        "test_amortised": False,
     },
     "data": {"train_size": None, "test_size": None, "label_scale": 0.94, "normalize": True},
     "infer": {

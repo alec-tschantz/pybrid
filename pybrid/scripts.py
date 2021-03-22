@@ -104,7 +104,7 @@ def main(cfg):
                 hybrid_acc, pc_acc, amort_acc, num_test_iters, num_test_iters_pc = 0, 0, 0, [], []
                 for _, (img_batch, label_batch) in enumerate(test_loader):
                     
-                    if cfg.model.train_amortised:
+                    if cfg.exp.test_hybrid:
                         label_preds, num_test_iter = model.test_batch(
                             img_batch, cfg.infer.num_test_iters, fixed_preds=cfg.infer.fixed_preds_test
                         )
@@ -119,10 +119,11 @@ def main(cfg):
                         use_amort=False,
                     )
 
-                    pc_acc = pc_acc + datasets.accuracy(label_preds, label_batch)
-                    num_test_iters_pc.append(num_test_iter_pc)
+                    if cfg.exp.test_pc:
+                        pc_acc = pc_acc + datasets.accuracy(label_preds, label_batch)
+                        num_test_iters_pc.append(num_test_iter_pc)
 
-                    if cfg.model.train_amortised:
+                    if cfg.exp.test_amortised:
                         label_preds = model.forward(img_batch)
                         amort_acc = amort_acc + datasets.accuracy(label_preds, label_batch)
 
