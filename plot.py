@@ -48,7 +48,7 @@ def set_axes(ax, num_epochs, x_label=None, y_label=None, x_lim=None, y_lim=None)
     plt.xticks(np.arange(0, num_epochs + 1, 5), np.arange(0, num_epochs + 1, 5))
 
 
-def plot_threshold_metrics(hyb_path_thresh, pc_path_thresh, save_path):
+def plot_threshold_metrics(hyb_path_thresh, pc_path_thresh):
     seeds = [0, 1, 2]
     hybrid_accs, pc_accs, amort_accs, num_test_iters, num_test_iters_pc = [], [], [], [], []
     for seed in seeds:
@@ -99,7 +99,7 @@ def plot_threshold_metrics(hyb_path_thresh, pc_path_thresh, save_path):
     plt.show()
 
 
-def plot_hybrid_metrics(hyb_path, pc_path, save_path, save_path_2):
+def plot_hybrid_metrics(hyb_path, pc_path):
     seeds = [0, 1, 2]
     hybrid_accs, pc_accs, amort_accs, td_errs, bu_errs = [], [], [], [], []
     for seed in seeds:
@@ -127,7 +127,7 @@ def plot_hybrid_metrics(hyb_path, pc_path, save_path, save_path_2):
     set_axes(ax, hyb_mean.shape[0], x_label="Epoch", y_label="Accuracy", y_lim=(0, 1.0))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
+    plt.savefig("figures/performance.png", dpi=300)
     plt.show()
 
     _, ax = plt.subplots(figsize=(6, 4))
@@ -136,15 +136,15 @@ def plot_hybrid_metrics(hyb_path, pc_path, save_path, save_path_2):
     set_axes(ax, hyb_mean.shape[0], x_label="Epoch", y_label="Prediction error")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(save_path_2, dpi=300)
+    plt.savefig("figures/errors.png", dpi=300)
     plt.show()
 
 
 if __name__ == "__main__":
-    hyb_path = "results/hybrid"
-    pc_path = "results/predcoding"
-    plot_hybrid_metrics(hyb_path, pc_path, "figures/results1.pdf", "figures/results2.pdf")
+    hyb_path = "results/hybrid5"
+    pc_path = "results/predcoding5"
+    plot_hybrid_metrics(hyb_path, pc_path)
 
-    hyb_path_thresh = "results/hybrid3"
-    pc_path_thresh = "results/predcoding3"
-    plot_threshold_metrics(hyb_path_thresh, pc_path_thresh, "figures/results3.pdf")
+    hyb_path_thresh = "results/hybrid6"
+    pc_path_thresh = "results/predcoding6"
+    plot_threshold_metrics(hyb_path_thresh, pc_path_thresh)
