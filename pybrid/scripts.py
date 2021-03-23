@@ -107,8 +107,8 @@ def main(cfg):
                     msg = msg + f"iterations: {num_iter}"
                     logging.info(msg)
 
-            if cfg.optim.normalize_weights:
-                model.normalize_weights()
+                if cfg.optim.normalize_weights:
+                    model.normalize_weights()
 
             metrics.final_errs.append(sum(final_errs) / len(train_loader))
             metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
