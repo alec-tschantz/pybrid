@@ -102,10 +102,13 @@ def main(cfg):
                     amort_err = sum(amort_errs) / (batch_id + 1)
                     num_iter = sum(num_train_iters) / (batch_id + 1)
                     msg = f"Batch [{batch_id}/{len(train_loader)}]: "
-                    msg = msg + f"losses PC {pc_loss:.4f} Q {amort_loss:.4f} "
-                    msg = msg + f"errors PC {pc_err:.4f} Q {amort_err:.4f} "
+                    msg = msg + f"losses PC {pc_loss:.1f} Q {amort_loss:.1f} "
+                    msg = msg + f"errors PC {pc_err:.1f} Q {amort_err:.1f} "
                     msg = msg + f"iterations: {num_iter}"
                     logging.info(msg)
+
+                if cfg.optim.normalize_weights:
+                    model.normalize_weights()
 
             metrics.final_errs.append(sum(final_errs) / len(train_loader))
             metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
@@ -159,9 +162,6 @@ def main(cfg):
                 _, label_batch = next(iter(test_loader))
                 img_preds = model.backward(label_batch)
                 datasets.plot_imgs(img_preds, cfg.exp.img_dir + f"/{epoch}.png")
-
-                if cfg.optim.normalize_weights:
-                    model.normalize_weights()
 
             utils.save_json(metrics, cfg.exp.log_dir + "/metrics.json")
             logging.info(f"Saved metrics @ {cfg.exp.log_dir}/metrics.json")
