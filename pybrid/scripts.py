@@ -57,6 +57,7 @@ def main(cfg):
                 "num_train_iters": [],
                 "num_test_iters": [],
                 "num_test_iters_pc": [],
+                "init_errs": [],
                 "avg_errs": [],
             }
         )
@@ -65,7 +66,7 @@ def main(cfg):
 
             logging.info(f"Train @ epoch {epoch} [{len(train_loader)} batches]")
             pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
-            avg_errs = []
+            avg_errs, init_errs = [], []
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
                 num_train_iter, avg_err = model.train_batch(
                     img_batch,
@@ -76,6 +77,7 @@ def main(cfg):
                     thresh=cfg.infer.train_thresh,
                 )
                 avg_errs.append(avg_err[-1])
+                init_errs.append(avg_err[0])
 
                 optimizer.step(
                     curr_epoch=epoch,
@@ -98,10 +100,11 @@ def main(cfg):
                     amort_loss = sum(amort_losses) / (batch_id + 1)
                     amort_err = sum(amort_errs) / (batch_id + 1)
                     num_iter = sum(num_train_iters) / (batch_id + 1)
-                    logging.info(f"Batch [{batch_id}/{len(train_loader)}]: ")
-                    logging.info(f"Losses: [PC {pc_loss:.4f} Amortised {amort_loss:.4f}]")
-                    logging.info(f"Errors: [PC {pc_err:.4f} Amortised {amort_err:.4f}]")
-                    logging.info(f"Number of iterations {num_iter}")
+                    msg = f"Batch [{batch_id}/{len(train_loader)}]: "
+                    msg = msg + f"Losses: [PC {pc_loss:.4f} Amortised {amort_loss:.4f}] "
+                    msg = msg + f"Errors: [PC {pc_err:.4f} Amortised {amort_err:.4f}] "
+                    msg = msg + f"Iterations {num_iter}"
+                    logging.info(msg)
 
             metrics.avg_errs.append(sum(avg_errs) / len(train_loader))
             metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
@@ -109,6 +112,7 @@ def main(cfg):
             metrics.amort_losses.append(sum(amort_losses) / len(train_loader))
             metrics.amort_errs.append(sum(amort_errs) / len(train_loader))
             metrics.num_train_iters.append(sum(num_train_iters) / len(train_loader))
+            metrics.init_errs.append(sum(init_errs) / len(train_loader))
 
             if epoch % cfg.exp.test_every == 0:
                 logging.info(f"Test @ epoch {epoch} [{len(test_loader)} batches]")

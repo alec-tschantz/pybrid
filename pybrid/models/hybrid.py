@@ -139,8 +139,11 @@ class HybridModel(BaseModel):
             self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
             self.errs[n] = self.mus[n] - self.preds[n]
 
-        itr = 0
         avg_errs = []
+        avg_err = self.get_errors()[0] / self.total_params
+        avg_errs.append(avg_err)
+
+        itr = 0
         for itr in range(num_iters):
             for l in range(1, self.num_layers):
                 delta = self.layers[l].backward(self.errs[l + 1]) - self.errs[l]
@@ -164,8 +167,11 @@ class HybridModel(BaseModel):
             self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
             self.errs[n] = self.mus[n] - self.preds[n]
 
-        itr = 0
         avg_errs = []
+        avg_err = self.get_errors()[0] / self.total_params
+        avg_errs.append(avg_err)
+
+        itr = 0
         for itr in range(num_iters):
             delta = self.layers[0].backward(self.errs[1])
             self.mus[0] = self.mus[0] + self.mu_dt * (2 * delta)
@@ -220,8 +226,7 @@ class HybridModel(BaseModel):
             return torch.sum(torch.abs(self.errs[-1])).item(), 0
 
     def get_weight_stats(self):
-        mean_abs_weights = []
-        mean_abs_biases = []
+        mean_abs_weights, mean_abs_biases = [], []
         for l in range(self.num_layers):
             mean_abs_weights.append(torch.mean(torch.abs(self.layers[l].weights)).item())
             mean_abs_biases.append(torch.mean(torch.abs(self.layers[l].bias)).item())
