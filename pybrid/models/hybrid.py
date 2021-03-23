@@ -110,9 +110,8 @@ class HybridModel(BaseModel):
             self.forward_mu()
             self.set_img_batch(img_batch)
         else:
-            self.reset_mu(img_batch.size(0), init_std)
             self.set_label_batch(label_batch)
-            #  TODO self.backward_mu()
+            self.backward_mu()
             self.set_img_batch(img_batch)
             
 
