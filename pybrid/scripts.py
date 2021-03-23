@@ -57,6 +57,7 @@ def main(cfg):
                 "num_train_iters": [],
                 "num_test_iters": [],
                 "num_test_iters_pc": [],
+                "avg_errs": [],
             }
         )
         for epoch in range(1, cfg.exp.num_epochs + 1):
@@ -64,9 +65,9 @@ def main(cfg):
 
             logging.info(f"Train @ epoch {epoch} [{len(train_loader)} batches]")
             pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
+            avg_errs = []
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
-
-                num_train_iter = model.train_batch(
+                num_train_iter, avg_err = model.train_batch(
                     img_batch,
                     label_batch,
                     cfg.infer.num_train_iters,
@@ -74,6 +75,7 @@ def main(cfg):
                     use_amort=cfg.model.train_amort,
                     thresh=cfg.infer.train_thresh,
                 )
+                avg_errs.append(avg_err[-1])
 
                 optimizer.step(
                     curr_epoch=epoch,
@@ -101,6 +103,7 @@ def main(cfg):
                     logging.info(f"Errors: [PC {pc_err:.4f} Amortised {amort_err:.4f}]")
                     logging.info(f"Number of iterations {num_iter}")
 
+            metrics.avg_errs.append(sum(avg_errs) / len(train_loader))
             metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
             metrics.pc_errs.append(sum(pc_errs) / len(train_loader))
             metrics.amort_losses.append(sum(amort_losses) / len(train_loader))
@@ -113,7 +116,7 @@ def main(cfg):
                 for _, (img_batch, label_batch) in enumerate(test_loader):
 
                     if cfg.exp.test_hybrid:
-                        label_preds, num_test_iter = model.test_batch(
+                        label_preds, num_test_iter, __path__ = model.test_batch(
                             img_batch,
                             cfg.infer.num_test_iters,
                             fixed_preds=cfg.infer.fixed_preds_test,
@@ -124,7 +127,7 @@ def main(cfg):
                         num_test_iters.append(num_test_iter)
 
                     if cfg.exp.test_pc:
-                        label_preds, num_test_iter_pc = model.test_batch(
+                        label_preds, num_test_iter_pc, _ = model.test_batch(
                             img_batch,
                             cfg.infer.num_test_iters,
                             init_std=cfg.infer.init_std,
@@ -132,7 +135,6 @@ def main(cfg):
                             use_amort=False,
                             thresh=cfg.infer.test_thresh,
                         )
-
                         pc_acc = pc_acc + datasets.accuracy(label_preds, label_batch)
                         num_test_iters_pc.append(num_test_iter_pc)
 

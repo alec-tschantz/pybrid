@@ -108,11 +108,11 @@ class HybridModel(BaseModel):
             self.set_img_batch(img_batch)
 
         self.set_label_batch(label_batch)
-        num_iter = self.train_updates(num_iters, fixed_preds=fixed_preds, thresh=thresh)
+        num_iter, avg_errs = self.train_updates(num_iters, fixed_preds=fixed_preds, thresh=thresh)
         self.update_grads()
         if use_amort:
             self.update_amort_grads()
-        return num_iter
+        return num_iter, avg_errs
 
     def test_batch(
         self,
@@ -131,8 +131,8 @@ class HybridModel(BaseModel):
             self.reset_mu(img_batch.size(0), init_std)
 
         self.set_img_batch(img_batch)
-        num_iter = self.test_updates(num_iters, fixed_preds=fixed_preds, thresh=thresh)
-        return self.mus[0], num_iter
+        num_iter, avg_errs = self.test_updates(num_iters, fixed_preds=fixed_preds, thresh=thresh)
+        return self.mus[0], num_iter, avg_errs
 
     def train_updates(self, num_iters, fixed_preds=False, thresh=None):
         for n in range(1, self.num_nodes):
@@ -140,6 +140,7 @@ class HybridModel(BaseModel):
             self.errs[n] = self.mus[n] - self.preds[n]
 
         itr = 0
+        avg_errs = []
         for itr in range(num_iters):
             for l in range(1, self.num_layers):
                 delta = self.layers[l].backward(self.errs[l + 1]) - self.errs[l]
@@ -151,10 +152,12 @@ class HybridModel(BaseModel):
                 self.errs[n] = self.mus[n] - self.preds[n]
 
             avg_err = self.get_errors()[0] / self.total_params
+            avg_errs.append(avg_err)
             if thresh is not None and avg_err < thresh:
+                logging.info(f"Broke @ {itr} (train {avg_err})")
                 break
 
-        return itr
+        return itr, avg_errs
 
     def test_updates(self, num_iters, fixed_preds=False, thresh=None):
         for n in range(1, self.num_nodes):
@@ -162,6 +165,7 @@ class HybridModel(BaseModel):
             self.errs[n] = self.mus[n] - self.preds[n]
 
         itr = 0
+        avg_errs = []
         for itr in range(num_iters):
             delta = self.layers[0].backward(self.errs[1])
             self.mus[0] = self.mus[0] + self.mu_dt * (2 * delta)
@@ -175,10 +179,12 @@ class HybridModel(BaseModel):
                 self.errs[n] = self.mus[n] - self.preds[n]
 
             avg_err = self.get_errors()[0] / self.total_params
+            avg_errs.append(avg_err)
             if thresh is not None and avg_err < thresh:
+                logging.info(f"Broke @ {itr} (test {avg_err}))")
                 break
 
-        return itr
+        return itr, avg_errs
 
     def update_grads(self):
         for l in range(self.num_layers):
