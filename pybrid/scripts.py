@@ -71,7 +71,7 @@ def main(cfg):
         final_errs, init_errs = [], []
         while global_batch_id < cfg.exp.num_batches:
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
-                
+                global_batch_id = global_batch_id + 1
                 num_train_iter, avg_err = model.train_batch(
                     img_batch,
                     label_batch,
@@ -159,4 +159,4 @@ def main(cfg):
                     pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
                     final_errs, init_errs = [], []
                     curr_epoch = curr_epoch + 1
-                global_batch_id = global_batch_id + 1
+                
