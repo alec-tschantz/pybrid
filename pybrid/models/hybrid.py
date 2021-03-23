@@ -157,7 +157,6 @@ class HybridModel(BaseModel):
             avg_err = self.get_errors()[0] / self.total_params
             avg_errs.append(avg_err)
             if thresh is not None and avg_err < thresh:
-                logging.info(f"Broke @ {itr} (train {avg_err})")
                 break
 
         return itr, avg_errs
@@ -187,7 +186,6 @@ class HybridModel(BaseModel):
             avg_err = self.get_errors()[0] / self.total_params
             avg_errs.append(avg_err)
             if thresh is not None and avg_err < thresh:
-                logging.info(f"Broke @ {itr} (test {avg_err}))")
                 break
 
         return itr, avg_errs
