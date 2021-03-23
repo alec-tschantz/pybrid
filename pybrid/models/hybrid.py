@@ -95,7 +95,14 @@ class HybridModel(BaseModel):
             self.mus[l] = self.layers[l - 1].forward(self.mus[l - 1])
 
     def train_batch(
-        self, img_batch, label_batch, num_iters=20, fixed_preds=False, use_amort=True, thresh=None
+        self,
+        img_batch,
+        label_batch,
+        num_iters=20,
+        init_std=0.05,
+        fixed_preds=False,
+        use_amort=True,
+        thresh=None,
     ):
         self.reset()
         if use_amort:
@@ -103,9 +110,11 @@ class HybridModel(BaseModel):
             self.forward_mu()
             self.set_img_batch(img_batch)
         else:
+            self.reset_mu(img_batch.size(0), init_std)
             self.set_label_batch(label_batch)
-            self.backward_mu()
+            #  TODO self.backward_mu()
             self.set_img_batch(img_batch)
+            
 
         self.set_label_batch(label_batch)
         num_iter, avg_errs = self.train_updates(num_iters, fixed_preds=fixed_preds, thresh=thresh)

@@ -58,7 +58,7 @@ def main(cfg):
                 "num_test_iters": [],
                 "num_test_iters_pc": [],
                 "init_errs": [],
-                "avg_errs": [],
+                "final_errs": [],
             }
         )
         for epoch in range(1, cfg.exp.num_epochs + 1):
@@ -66,17 +66,18 @@ def main(cfg):
 
             logging.info(f"Train @ epoch {epoch} [{len(train_loader)} batches]")
             pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
-            avg_errs, init_errs = [], []
+            final_errs, init_errs = [], []
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
                 num_train_iter, avg_err = model.train_batch(
                     img_batch,
                     label_batch,
                     cfg.infer.num_train_iters,
+                    init_std=cfg.infer.init_std,
                     fixed_preds=cfg.infer.fixed_preds_train,
                     use_amort=cfg.model.train_amort,
                     thresh=cfg.infer.train_thresh,
                 )
-                avg_errs.append(avg_err[-1])
+                final_errs.append(avg_err[-1])
                 init_errs.append(avg_err[0])
 
                 optimizer.step(
@@ -101,12 +102,12 @@ def main(cfg):
                     amort_err = sum(amort_errs) / (batch_id + 1)
                     num_iter = sum(num_train_iters) / (batch_id + 1)
                     msg = f"Batch [{batch_id}/{len(train_loader)}]: "
-                    msg = msg + f"Losses: [PC {pc_loss:.4f} Amortised {amort_loss:.4f}] "
-                    msg = msg + f"Errors: [PC {pc_err:.4f} Amortised {amort_err:.4f}] "
-                    msg = msg + f"Iterations {num_iter}"
+                    msg = msg + f"losses PC {pc_loss:.4f} Q {amort_loss:.4f} "
+                    msg = msg + f"errors PC {pc_err:.4f} Q {amort_err:.4f} "
+                    msg = msg + f"iterations: {num_iter}"
                     logging.info(msg)
 
-            metrics.avg_errs.append(sum(avg_errs) / len(train_loader))
+            metrics.final_errs.append(sum(final_errs) / len(train_loader))
             metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
             metrics.pc_errs.append(sum(pc_errs) / len(train_loader))
             metrics.amort_losses.append(sum(amort_losses) / len(train_loader))
