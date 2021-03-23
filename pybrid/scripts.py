@@ -101,13 +101,13 @@ def main(cfg):
 
                 if (global_batch_id % cfg.exp.batches_per_epoch == 0) and global_batch_id > 0:
                     metrics.batch_idx.append(global_batch_id)
-                    metrics.final_errs.append(sum(final_errs) / len(train_loader))
-                    metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
-                    metrics.pc_errs.append(sum(pc_errs) / len(train_loader))
-                    metrics.amort_losses.append(sum(amort_losses) / len(train_loader))
-                    metrics.amort_errs.append(sum(amort_errs) / len(train_loader))
-                    metrics.num_train_iters.append(sum(num_train_iters) / len(train_loader))
-                    metrics.init_errs.append(sum(init_errs) / len(train_loader))
+                    metrics.final_errs.append(sum(final_errs) / cfg.exp.batches_per_epoch)
+                    metrics.pc_losses.append(sum(pc_losses) / cfg.exp.batches_per_epoch)
+                    metrics.pc_errs.append(sum(pc_errs) / cfg.exp.batches_per_epoch)
+                    metrics.amort_losses.append(sum(amort_losses) / cfg.exp.batches_per_epoch)
+                    metrics.amort_errs.append(sum(amort_errs) / cfg.exp.batches_per_epoch)
+                    metrics.num_train_iters.append(sum(num_train_iters) / cfg.exp.batches_per_epoch)
+                    metrics.init_errs.append(sum(init_errs) / cfg.exp.batches_per_epoch)
 
                     logging.info(f"Test @ epoch {curr_epoch} [batch {global_batch_id}]")
                     hybrid_acc, pc_acc, amort_acc, num_test_iters, num_test_iters_pc = 0, 0, 0, [], []
