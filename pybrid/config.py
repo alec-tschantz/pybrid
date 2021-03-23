@@ -5,6 +5,8 @@ default_cfg = {
         "log_dir": "results/test",
         "seed": 0,
         "num_epochs": 20,
+        "num_batches": 500,
+        "batches_per_epoch": 50,
         "test_every": 1,
         "test_hybrid": False,
         "test_pc": False,

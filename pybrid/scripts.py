@@ -4,8 +4,7 @@ import torch
 from pybrid import utils, datasets, optim
 from pybrid.models.hybrid import HybridModel
 
-
-def main(cfg):
+def setup(cfg):
     cfg = utils.setup_experiment(cfg)
 
     datasets.download_mnist()
@@ -33,6 +32,7 @@ def main(cfg):
         use_bias=cfg.model.use_bias,
         kaiming_init=cfg.model.kaiming_init,
     )
+    logging.info(f"Loaded model {model}")
     optimizer = optim.get_optim(
         model.params,
         cfg.optim.name,
@@ -42,11 +42,15 @@ def main(cfg):
         grad_clip=cfg.optim.grad_clip,
         weight_decay=cfg.optim.weight_decay,
     )
-    logging.info(f"Loaded model {model}")
+    return cfg, train_loader, test_loader, model, optimizer
 
+def main(cfg):
+    cfg, train_loader, test_loader, model, optimizer = setup(cfg)
+    
     with torch.no_grad():
         metrics = utils.to_attr_dict(
             {
+                "batch_idx": [],
                 "hybrid_acc": [],
                 "pc_acc": [],
                 "amort_acc": [],
@@ -61,13 +65,13 @@ def main(cfg):
                 "final_errs": [],
             }
         )
-        for epoch in range(1, cfg.exp.num_epochs + 1):
-            logging.info(f"Epoch {epoch}/{cfg.exp.num_epochs + 1}")
-
-            logging.info(f"Train @ epoch {epoch} [{len(train_loader)} batches]")
-            pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
-            final_errs, init_errs = [], []
+        global_batch_id = 0
+        curr_epoch = 0
+        pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
+        final_errs, init_errs = [], []
+        while global_batch_id < cfg.exp.num_batches:
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
+                
                 num_train_iter, avg_err = model.train_batch(
                     img_batch,
                     label_batch,
@@ -77,11 +81,9 @@ def main(cfg):
                     use_amort=cfg.model.train_amort,
                     thresh=cfg.infer.train_thresh,
                 )
-                final_errs.append(avg_err[-1])
-                init_errs.append(avg_err[0])
 
                 optimizer.step(
-                    curr_epoch=epoch,
+                    curr_epoch=curr_epoch,
                     curr_batch=batch_id,
                     n_batches=len(train_loader),
                     batch_size=img_batch.size(0),
@@ -94,74 +96,67 @@ def main(cfg):
                 amort_losses.append(amort_loss)
                 amort_errs.append(amort_err)
                 num_train_iters.append(num_train_iter)
+                final_errs.append(avg_err[-1])
+                init_errs.append(avg_err[0])
 
-                if batch_id % cfg.exp.log_batch_every == 0:
-                    pc_loss = sum(pc_losses) / (batch_id + 1)
-                    pc_err = sum(pc_errs) / (batch_id + 1)
-                    amort_loss = sum(amort_losses) / (batch_id + 1)
-                    amort_err = sum(amort_errs) / (batch_id + 1)
-                    num_iter = sum(num_train_iters) / (batch_id + 1)
-                    msg = f"Batch [{batch_id}/{len(train_loader)}]: "
-                    msg = msg + f"losses PC {pc_loss:.1f} Q {amort_loss:.1f} "
-                    msg = msg + f"errors PC {pc_err:.1f} Q {amort_err:.1f} "
-                    msg = msg + f"iterations: {num_iter}"
-                    logging.info(msg)
+                if (global_batch_id % cfg.exp.batches_per_epoch == 0) and global_batch_id > 0:
+                    metrics.batch_idx.append(global_batch_id)
+                    metrics.final_errs.append(sum(final_errs) / len(train_loader))
+                    metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
+                    metrics.pc_errs.append(sum(pc_errs) / len(train_loader))
+                    metrics.amort_losses.append(sum(amort_losses) / len(train_loader))
+                    metrics.amort_errs.append(sum(amort_errs) / len(train_loader))
+                    metrics.num_train_iters.append(sum(num_train_iters) / len(train_loader))
+                    metrics.init_errs.append(sum(init_errs) / len(train_loader))
 
-                if cfg.optim.normalize_weights:
-                    model.normalize_weights()
+                    logging.info(f"Test @ epoch {curr_epoch} [batch {global_batch_id}]")
+                    hybrid_acc, pc_acc, amort_acc, num_test_iters, num_test_iters_pc = 0, 0, 0, [], []
+                    for _, (img_batch, label_batch) in enumerate(test_loader):
 
-            metrics.final_errs.append(sum(final_errs) / len(train_loader))
-            metrics.pc_losses.append(sum(pc_losses) / len(train_loader))
-            metrics.pc_errs.append(sum(pc_errs) / len(train_loader))
-            metrics.amort_losses.append(sum(amort_losses) / len(train_loader))
-            metrics.amort_errs.append(sum(amort_errs) / len(train_loader))
-            metrics.num_train_iters.append(sum(num_train_iters) / len(train_loader))
-            metrics.init_errs.append(sum(init_errs) / len(train_loader))
+                        if cfg.exp.test_hybrid:
+                            label_preds, num_test_iter, __path__ = model.test_batch(
+                                img_batch,
+                                cfg.infer.num_test_iters,
+                                fixed_preds=cfg.infer.fixed_preds_test,
+                                use_amort=True,
+                                thresh=cfg.infer.test_thresh,
+                            )
+                            hybrid_acc = hybrid_acc + datasets.accuracy(label_preds, label_batch)
+                            num_test_iters.append(num_test_iter)
 
-            if epoch % cfg.exp.test_every == 0:
-                logging.info(f"Test @ epoch {epoch} [{len(test_loader)} batches]")
-                hybrid_acc, pc_acc, amort_acc, num_test_iters, num_test_iters_pc = 0, 0, 0, [], []
-                for _, (img_batch, label_batch) in enumerate(test_loader):
+                        if cfg.exp.test_pc:
+                            label_preds, num_test_iter_pc, _ = model.test_batch(
+                                img_batch,
+                                cfg.infer.num_test_iters,
+                                init_std=cfg.infer.init_std,
+                                fixed_preds=cfg.infer.fixed_preds_test,
+                                use_amort=False,
+                                thresh=cfg.infer.test_thresh,
+                            )
+                            pc_acc = pc_acc + datasets.accuracy(label_preds, label_batch)
+                            num_test_iters_pc.append(num_test_iter_pc)
 
-                    if cfg.exp.test_hybrid:
-                        label_preds, num_test_iter, __path__ = model.test_batch(
-                            img_batch,
-                            cfg.infer.num_test_iters,
-                            fixed_preds=cfg.infer.fixed_preds_test,
-                            use_amort=True,
-                            thresh=cfg.infer.test_thresh,
-                        )
-                        hybrid_acc = hybrid_acc + datasets.accuracy(label_preds, label_batch)
-                        num_test_iters.append(num_test_iter)
+                        if cfg.exp.test_amort:
+                            label_preds = model.forward(img_batch)
+                            amort_acc = amort_acc + datasets.accuracy(label_preds, label_batch)
 
-                    if cfg.exp.test_pc:
-                        label_preds, num_test_iter_pc, _ = model.test_batch(
-                            img_batch,
-                            cfg.infer.num_test_iters,
-                            init_std=cfg.infer.init_std,
-                            fixed_preds=cfg.infer.fixed_preds_test,
-                            use_amort=False,
-                            thresh=cfg.infer.test_thresh,
-                        )
-                        pc_acc = pc_acc + datasets.accuracy(label_preds, label_batch)
-                        num_test_iters_pc.append(num_test_iter_pc)
+                    metrics.hybrid_acc.append(hybrid_acc / len(test_loader))
+                    metrics.pc_acc.append(pc_acc / len(test_loader))
+                    metrics.amort_acc.append(amort_acc / len(test_loader))
+                    metrics.num_test_iters.append(sum(num_test_iters) / len(test_loader))
+                    metrics.num_test_iters_pc.append(sum(num_test_iters_pc) / len(test_loader))
+                    logging.info("Metrics:")
+                    pprint({k: v[-1] for k, v in metrics.items()})
 
-                    if cfg.exp.test_amort:
-                        label_preds = model.forward(img_batch)
-                        amort_acc = amort_acc + datasets.accuracy(label_preds, label_batch)
+                    logging.info(f"Generating image @ {cfg.exp.img_dir}/{curr_epoch}.png")
+                    _, label_batch = next(iter(test_loader))
+                    img_preds = model.backward(label_batch)
+                    datasets.plot_imgs(img_preds, cfg.exp.img_dir + f"/{curr_epoch}.png")
 
-                metrics.hybrid_acc.append(hybrid_acc / len(test_loader))
-                metrics.pc_acc.append(pc_acc / len(test_loader))
-                metrics.amort_acc.append(amort_acc / len(test_loader))
-                metrics.num_test_iters.append(sum(num_test_iters) / len(test_loader))
-                metrics.num_test_iters_pc.append(sum(num_test_iters_pc) / len(test_loader))
-                logging.info("Metrics:")
-                pprint({k: v[-1] for k, v in metrics.items()})
+                    utils.save_json(metrics, cfg.exp.log_dir + "/metrics.json")
+                    logging.info(f"Saved metrics @ {cfg.exp.log_dir}/metrics.json")
 
-                logging.info(f"Generating image @ {cfg.exp.img_dir}/{epoch}.png")
-                _, label_batch = next(iter(test_loader))
-                img_preds = model.backward(label_batch)
-                datasets.plot_imgs(img_preds, cfg.exp.img_dir + f"/{epoch}.png")
-
-            utils.save_json(metrics, cfg.exp.log_dir + "/metrics.json")
-            logging.info(f"Saved metrics @ {cfg.exp.log_dir}/metrics.json")
+                    pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
+                    final_errs, init_errs = [], []
+                    curr_epoch = curr_epoch + 1
+                global_batch_id = global_batch_id + 1
