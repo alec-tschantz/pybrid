@@ -1,6 +1,6 @@
 from pybrid import utils
 
-cfg = {
+default_cfg = {
     "exp": {
         "log_dir": "results/test",
         "seed": 0,
@@ -8,7 +8,8 @@ cfg = {
         "test_every": 1,
         "test_hybrid": False,
         "test_pc": False,
-        "test_amortised": False,
+        "test_amort": False,
+        "log_batch_every": 100
     },
     "data": {"train_size": None, "test_size": None, "label_scale": 0.94, "normalize": True},
     "infer": {
@@ -17,14 +18,14 @@ cfg = {
         "num_test_iters": 500,
         "fixed_preds_train": False,
         "fixed_preds_test": False,
-        "init_std": 0.01,
         "train_thresh": None,
         "test_thresh": None,
+        "init_std": 0.01,
     },
     "model": {
         "nodes": [10, 500, 500, 784],
         "amort_nodes": [784, 500, 500, 10],
-        "train_amortised": True,
+        "train_amort": True,
         "use_bias": True,
         "kaiming_init": False,
         "act_fn": "tanh",
@@ -35,9 +36,9 @@ cfg = {
         "amort_lr": 1e-4,
         "batch_size": 64,
         "batch_scale": True,
-        "grad_clip": 5,
+        "grad_clip": 50,
         "weight_decay": None,
         "normalize_weights": True,
     },
 }
-cfg = utils.to_attr_dict(cfg)
+default_cfg = utils.to_attr_dict(default_cfg)

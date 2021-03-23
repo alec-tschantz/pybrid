@@ -38,10 +38,6 @@ class BaseModel(ABC):
     def update_grads(self):
         pass
 
-    @abstractmethod
-    def get_loss(self):
-        pass
-
     @property
     def params(self):
         pass

@@ -13,8 +13,6 @@ class HybridModel(BaseModel):
         nodes,
         amort_nodes,
         act_fn,
-        train_thresh=None,
-        test_thresh=None,
         mu_dt=0.01,
         use_bias=False,
         kaiming_init=False,
@@ -22,8 +20,6 @@ class HybridModel(BaseModel):
         self.nodes = nodes
         self.amort_nodes = amort_nodes
         self.mu_dt = mu_dt
-        self.train_thresh = train_thresh
-        self.test_thresh = test_thresh
 
         self.num_nodes = len(nodes)
         self.num_layers = len(nodes) - 1
@@ -41,13 +37,12 @@ class HybridModel(BaseModel):
                 kaiming_init=kaiming_init,
             )
             self.layers.append(layer)
-            self.total_params = self.total_params + (nodes[l] * nodes[l + 1]) + nodes[l + 1]
+            self.total_params = self.total_params + ((nodes[l] * nodes[l + 1]) + nodes[l + 1])
 
-            # TODO use same layer_act_fn ?
             amort_layer = FCLayer(
                 in_size=amort_nodes[l],
                 out_size=amort_nodes[l + 1],
-                act_fn=layer_act_fn,
+                act_fn=layer_act_fn,  # TODO
                 use_bias=use_bias,
                 kaiming_init=kaiming_init,
                 is_amortised=True,
@@ -99,7 +94,9 @@ class HybridModel(BaseModel):
         for l in range(1, self.num_layers):
             self.mus[l] = self.layers[l - 1].forward(self.mus[l - 1])
 
-    def train_batch(self, img_batch, label_batch, num_iters=20, fixed_preds=False, use_amort=True):
+    def train_batch(
+        self, img_batch, label_batch, num_iters=20, fixed_preds=False, use_amort=True, thresh=None
+    ):
         self.reset()
         if use_amort:
             self.set_img_batch_amort(img_batch)
@@ -111,14 +108,20 @@ class HybridModel(BaseModel):
             self.set_img_batch(img_batch)
 
         self.set_label_batch(label_batch)
-        num_iter = self.train_updates(num_iters, fixed_preds=fixed_preds)
+        num_iter = self.train_updates(num_iters, fixed_preds=fixed_preds, thresh=thresh)
         self.update_grads()
         if use_amort:
             self.update_amort_grads()
         return num_iter
 
     def test_batch(
-        self, img_batch, num_iters=100, init_std=0.05, fixed_preds=False, use_amort=True
+        self,
+        img_batch,
+        num_iters=100,
+        init_std=0.05,
+        fixed_preds=False,
+        use_amort=True,
+        thresh=None,
     ):
         self.reset()
         if use_amort:
@@ -128,10 +131,10 @@ class HybridModel(BaseModel):
             self.reset_mu(img_batch.size(0), init_std)
 
         self.set_img_batch(img_batch)
-        num_iter = self.test_updates(num_iters, fixed_preds=fixed_preds)
+        num_iter = self.test_updates(num_iters, fixed_preds=fixed_preds, thresh=thresh)
         return self.mus[0], num_iter
 
-    def train_updates(self, num_iters, fixed_preds=False):
+    def train_updates(self, num_iters, fixed_preds=False, thresh=None):
         for n in range(1, self.num_nodes):
             self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
             self.errs[n] = self.mus[n] - self.preds[n]
@@ -147,13 +150,13 @@ class HybridModel(BaseModel):
                     self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
                 self.errs[n] = self.mus[n] - self.preds[n]
 
-            avg_err = self.get_errors() / self.total_params
-            if self.train_thresh is not None and avg_err < self.train_thresh:
+            avg_err = self.get_errors()[0] / self.total_params
+            if thresh is not None and avg_err < thresh:
                 break
 
         return itr
 
-    def test_updates(self, num_iters, fixed_preds):
+    def test_updates(self, num_iters, fixed_preds=False, thresh=None):
         for n in range(1, self.num_nodes):
             self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
             self.errs[n] = self.mus[n] - self.preds[n]
@@ -171,8 +174,8 @@ class HybridModel(BaseModel):
                     self.preds[n] = self.layers[n - 1].forward(self.mus[n - 1])
                 self.errs[n] = self.mus[n] - self.preds[n]
 
-            avg_err = self.get_errors() / self.total_params
-            if self.test_thresh is not None and avg_err < self.test_thresh:
+            avg_err = self.get_errors()[0] / self.total_params
+            if thresh is not None and avg_err < thresh:
                 break
 
         return itr
@@ -191,13 +194,17 @@ class HybridModel(BaseModel):
     def get_errors(self):
         total_err = 0
         for err in self.errs:
-            try:
+            if len(err) > 0:
                 total_err = total_err + torch.sum(err ** 2).item()
-            except:
-                total_err = total_err
-        return total_err
 
-    def get_loss(self):
+        q_total_err = 0
+        for err in self.q_errs:
+            if len(err) > 0:
+                q_total_err = q_total_err + torch.sum(err ** 2).item()
+
+        return total_err, q_total_err
+
+    def get_losses(self):
         try:
             return torch.sum(self.errs[-1] ** 2).item(), torch.sum(self.q_errs[-1] ** 2).item()
         except:
