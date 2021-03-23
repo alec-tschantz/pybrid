@@ -201,20 +201,23 @@ class HybridModel(BaseModel):
         total_err = 0
         for err in self.errs:
             if len(err) > 0:
-                total_err = total_err + torch.sum(err ** 2).item()
+                total_err = total_err + torch.sum(torch.abs(err)).item()
 
         q_total_err = 0
         for err in self.q_errs:
             if len(err) > 0:
-                q_total_err = q_total_err + torch.sum(err ** 2).item()
+                q_total_err = q_total_err + torch.sum(torch.abs(err)).item()
 
         return total_err, q_total_err
 
     def get_losses(self):
         try:
-            return torch.sum(self.errs[-1] ** 2).item(), torch.sum(self.q_errs[-1] ** 2).item()
+            return (
+                torch.sum(torch.abs(self.errs[-1])).item(),
+                torch.sum(torch.abs(self.q_errs[-1])).item(),
+            )
         except:
-            return torch.sum(self.errs[-1] ** 2).item(), 0
+            return torch.sum(torch.abs(self.errs[-1])).item(), 0
 
     def get_weight_stats(self):
         mean_abs_weights = []

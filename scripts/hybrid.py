@@ -11,7 +11,7 @@ cfg.data.test_size = 1000
 cfg.infer.num_train_iters = 20
 cfg.infer.num_test_iters = 100
 
-cfg.train_thresh = 0.001
-cfg.test_thresh = 0.001
+cfg.infer.train_thresh = 0.001
+cfg.infer.test_thresh = 0.001
 
 main(cfg)
