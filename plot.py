@@ -35,7 +35,7 @@ def plot_mean_std(ax, mean, upper, lower, color, label=""):
     ax.fill_between(range(x_len), lower, upper, color=color, alpha=0.4)
 
 
-def set_axes(ax, num_epochs, x_label=None, y_label=None, x_lim=None, y_lim=None):
+def set_axes(ax, batch_ids, x_label=None, y_label=None, x_lim=None, y_lim=None):
     if x_lim is not None:
         ax.set_xlim(*x_lim)
     if y_lim is not None:
@@ -45,106 +45,124 @@ def set_axes(ax, num_epochs, x_label=None, y_label=None, x_lim=None, y_lim=None)
     if x_label is not None:
         ax.set_ylabel(y_label)
     [spine.set_linewidth(1.3) for spine in ax.spines.values()]
-    plt.xticks(np.arange(0, num_epochs + 1, 5), np.arange(0, num_epochs + 1, 5))
+    num_batches = len(batch_ids)
+    plot_ids = np.arange(0, num_batches + 1, 5)
+    batch_ids_mapped = [batch_ids[i] for i in plot_ids]
+    plt.xticks(plot_ids, batch_ids_mapped)
 
 
-def plot_threshold_metrics(hyb_path_thresh, pc_path_thresh):
+def plot_threshold_metrics(hyb_path_thresh):
     seeds = [0, 1, 2]
-    hybrid_accs, pc_accs, amort_accs, num_test_iters, num_test_iters_pc = [], [], [], [], []
+    hybrid_accs, amort_accs, num_test_iters = [], [], []
+    batch_ids = []
     for seed in seeds:
         hyb_seed_path = hyb_path_thresh + "/" + str(seed)
-        pc_seed_path = pc_path_thresh + "/" + str(seed)
         hyb_metrics = utils.load_json(hyb_seed_path + "/metrics.json")
-        pc_metrics = utils.load_json(pc_seed_path + "/metrics.json")
         hybrid_accs.append(hyb_metrics["hybrid_acc"])
-        pc_accs.append(pc_metrics["pc_acc"])
         amort_accs.append(hyb_metrics["amort_acc"])
         num_test_iters.append(hyb_metrics["num_test_iters"])
-        num_test_iters_pc.append(pc_metrics["num_test_iters_pc"])
+        batch_ids.append(hyb_metrics["batch_idx"])
+
+    batch_ids = batch_ids[0]
 
     hyb_mean, _, hyb_upper, hyb_lower = get_mean_std(hybrid_accs)
-    pc_mean, _, pc_upper, pc_lower = get_mean_std(pc_accs)
     amort_mean, _, amort_upper, amort_lower = get_mean_std(amort_accs)
     test_iters_mean, _, test_iters_upper, test_iters_lower = get_mean_std(num_test_iters)
-    test_iters_mean_pc, _, test_iters_upper_pc, test_iters_lower_pc = get_mean_std(
-        num_test_iters_pc
-    )
 
     _, ax = plt.subplots(figsize=(6, 4))
     plot_mean_std(ax, test_iters_mean, test_iters_upper, test_iters_lower, PALETTE[6], "Iterations")
-    set_axes(ax, hyb_mean.shape[0], x_label="Epoch", y_label="Iterations")
+    set_axes(ax, batch_ids, x_label="Batch", y_label="Iterations")
     plt.legend()
     plt.tight_layout()
     plt.savefig("figures/iterations.png", dpi=300)
     plt.show()
 
     _, ax = plt.subplots(figsize=(6, 4))
-    plot_mean_std(
-        ax, test_iters_mean_pc, test_iters_upper_pc, test_iters_lower_pc, PALETTE[9], "Iterations"
-    )
-    set_axes(ax, hyb_mean.shape[0], x_label="Epoch", y_label="Iterations")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("figures/iterations_pc.png", dpi=300)
-    plt.show()
-
-    _, ax = plt.subplots(figsize=(6, 4))
     plot_mean_std(ax, hyb_mean, hyb_upper, hyb_lower, PALETTE[3], "Hybrid PC")
-    plot_mean_std(ax, pc_mean, pc_upper, pc_lower, PALETTE[1], "Predictive Coding")
     plot_mean_std(ax, amort_mean, amort_upper, amort_lower, PALETTE[2], "Amortised")
-    set_axes(ax, hyb_mean.shape[0], x_label="Epoch", y_label="Iterations")
+    set_axes(ax, batch_ids, x_label="Batch", y_label="Accuracy")
     plt.legend()
     plt.tight_layout()
-    plt.savefig("figures/perform_thresh.png", dpi=300)
+    plt.savefig("figures/performance_thresh.png", dpi=300)
     plt.show()
 
 
-def plot_hybrid_metrics(hyb_path, pc_path):
+def plot_metrics(hyb_path, pc_path, uid):
     seeds = [0, 1, 2]
-    hybrid_accs, pc_accs, amort_accs, td_errs, bu_errs = [], [], [], [], []
+    hybrid_accs, pc_accs, amort_accs = [], [], []
+    hybrid_losses, pc_losses = [], []
+    hybrid_errs, pc_errs = [], []
+    batch_ids = []
     for seed in seeds:
         hyb_seed_path = hyb_path + "/" + str(seed)
         pc_seed_path = pc_path + "/" + str(seed)
+
         hyb_metrics = utils.load_json(hyb_seed_path + "/metrics.json")
         pc_metrics = utils.load_json(pc_seed_path + "/metrics.json")
+
+        batch_ids.append(hyb_metrics["batch_idx"])
         hybrid_accs.append(hyb_metrics["hybrid_acc"])
         pc_accs.append(pc_metrics["pc_acc"])
         amort_accs.append(hyb_metrics["amort_acc"])
-        td_errs.append(hyb_metrics["pc_errs"])
-        bu_errs.append(hyb_metrics["amort_errs"])
+        hybrid_errs.append(hyb_metrics["pc_errs"])
+        pc_errs.append(pc_metrics["pc_errs"])
+        hybrid_losses.append(hyb_metrics["pc_losses"])
+        pc_losses.append(pc_metrics["pc_losses"])
+
+    batch_ids = batch_ids[0]
 
     hyb_mean, _, hyb_upper, hyb_lower = get_mean_std(hybrid_accs)
     pc_mean, _, pc_upper, pc_lower = get_mean_std(pc_accs)
     amort_mean, _, amort_upper, amort_lower = get_mean_std(amort_accs)
 
-    td_mean, _, td_upper, td_lower = get_mean_std(td_errs)
-    bu_mean, _, bu_upper, bu_lower = get_mean_std(bu_errs)
+    hybrid_errs = np.array(hybrid_errs) / 64.0 
+    pc_errs = np.array(pc_errs) / 64.0 
+    hyb_err_mean, _, hyb_err_upper, hyb_err_lower = get_mean_std(hybrid_errs)
+    pc_err_mean, _, pc_err_upper, pc_err_lower = get_mean_std(pc_errs)
+
+    hybrid_losses = np.array(hybrid_losses) / 64.0 
+    pc_losses = np.array(pc_losses) / 64.0 
+    hyb_loss_mean, _, hyb_loss_upper, hyb_loss_lower = get_mean_std(hybrid_losses)
+    pc_loss_mean, _, pc_loss_upper, pc_loss_lower = get_mean_std(pc_losses)
+
 
     _, ax = plt.subplots(figsize=(6, 4))
     plot_mean_std(ax, hyb_mean, hyb_upper, hyb_lower, PALETTE[3], "Hybrid PC")
     plot_mean_std(ax, pc_mean, pc_upper, pc_lower, PALETTE[1], "Predictive Coding")
     plot_mean_std(ax, amort_mean, amort_upper, amort_lower, PALETTE[2], "Amortised")
-    set_axes(ax, hyb_mean.shape[0], x_label="Epoch", y_label="Accuracy", y_lim=(0, 1.0))
+    set_axes(ax, batch_ids, x_label="Batches", y_label="Accuracy", y_lim=(0, 1.0))
     plt.legend()
+    plt.title(f"Classification accuracy ({uid} iterations)")
     plt.tight_layout()
-    plt.savefig("figures/performance.png", dpi=300)
+    plt.savefig(f"figures/{uid}_performance.png", dpi=300)
     plt.show()
 
     _, ax = plt.subplots(figsize=(6, 4))
-    plot_mean_std(ax, td_mean, td_upper, td_lower, PALETTE[3], "Top-down errors")
-    plot_mean_std(ax, bu_mean, bu_upper, bu_lower, PALETTE[1], "Bottom-up errors")
-    set_axes(ax, hyb_mean.shape[0], x_label="Epoch", y_label="Prediction error")
+    plot_mean_std(ax, hyb_err_mean, hyb_err_upper, hyb_err_lower, PALETTE[3], "Hybrid errors")
+    plot_mean_std(ax, pc_err_mean, pc_err_upper, pc_err_lower, PALETTE[1], "PC errors")
+    set_axes(ax, batch_ids, x_label="Batches", y_label="Prediction errors", y_lim=(0, 250))
     plt.legend()
+    plt.title(f"Errors ({uid} iterations)")
     plt.tight_layout()
-    plt.savefig("figures/errors.png", dpi=300)
+    plt.savefig(f"figures/{uid}_errors.png", dpi=300)
+    plt.show()
+
+    _, ax = plt.subplots(figsize=(6, 4))
+    plot_mean_std(ax, hyb_loss_mean, hyb_loss_upper, hyb_loss_lower, PALETTE[3], "Hybrid losses")
+    plot_mean_std(ax, pc_loss_mean, pc_loss_upper, pc_loss_lower, PALETTE[1], "PC losses")
+    set_axes(ax, batch_ids, x_label="Batches", y_label="Data Loss", y_lim=(0, 120))
+    plt.legend()
+    plt.title(f"Generation losses ({uid} iterations)")
+    plt.tight_layout()
+    plt.savefig(f"figures/{uid}_losses.png", dpi=300)
     plt.show()
 
 
 if __name__ == "__main__":
-    hyb_path = "results/hybrid5"
-    pc_path = "results/predcoding5"
-    plot_hybrid_metrics(hyb_path, pc_path)
+    # plot_metrics("results/hybrid_5", "results/predcoding_5", "5")
+    # plot_metrics("results/hybrid_10", "results/predcoding_10", "10")
+    # plot_metrics("results/hybrid_25", "results/predcoding_25", "25")
+    # plot_metrics("results/hybrid_50", "results/predcoding_50", "50")
+    # plot_metrics("results/hybrid_100", "results/predcoding_100", "100")
+    plot_threshold_metrics("results/hybrid_thresh")
 
-    hyb_path_thresh = "results/hybrid6"
-    pc_path_thresh = "results/predcoding6"
-    plot_threshold_metrics(hyb_path_thresh, pc_path_thresh)
