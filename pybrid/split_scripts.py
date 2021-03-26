@@ -8,6 +8,7 @@ from pybrid.models.hybrid import HybridModel
 def setup(cfg):
     cfg = utils.setup_experiment(cfg)
 
+    datasets.download_mnist()
     train_dataset_1 = datasets.SplitMNIST(
         train=True,
         scale=cfg.data.label_scale,
