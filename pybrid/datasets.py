@@ -9,30 +9,7 @@ from pybrid import utils
 
 
 class MNIST(datasets.MNIST):
-    def __init__(self, train, path="./data", size=None, scale=None, normalize=False):
-        transform = _get_transform(normalize=normalize, mean=(0.1307), std=(0.3081))
-        super().__init__(path, download=False, transform=transform, train=train)
-        self.scale = scale
-        if size is not None:
-            self._reduce(size)
-
-    def __getitem__(self, index):
-        data, target = super().__getitem__(index)
-        data = _to_vector(data)
-        target = _one_hot(target)
-        if self.scale is not None:
-            target = _scale(target, self.scale)
-        return data, target
-
-    def _reduce(self, size):
-        self.data = self.data[0:size]
-        self.targets = self.targets[0:size]
-
-
-class SplitMNIST(datasets.MNIST):
-    def __init__(
-        self, train, path="./data", size=None, scale=None, normalize=False, labels=None
-    ):
+    def __init__(self, train, path="./data", size=None, scale=None, normalize=False, labels=None):
         transform = _get_transform(normalize=normalize, mean=(0.1307), std=(0.3081))
         super().__init__(path, download=False, transform=transform, train=train)
         self.scale = scale
@@ -40,6 +17,7 @@ class SplitMNIST(datasets.MNIST):
             self._reduce(size)
         if labels is not None:
             self._split(labels)
+
 
     def __getitem__(self, index):
         data, target = super().__getitem__(index)
@@ -59,7 +37,6 @@ class SplitMNIST(datasets.MNIST):
             idxs = torch.cat((idxs, (self.targets == label).nonzero().squeeze()))
         self.data = self.data[idxs]
         self.targets = self.targets[idxs]
-
 
 
 class SVHN(datasets.SVHN):

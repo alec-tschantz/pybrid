@@ -9,28 +9,28 @@ def setup(cfg):
     cfg = utils.setup_experiment(cfg)
 
     datasets.download_mnist()
-    train_dataset_1 = datasets.SplitMNIST(
+    train_dataset_1 = datasets.MNIST(
         train=True,
         scale=cfg.data.label_scale,
         size=cfg.data.train_size,
         normalize=cfg.data.normalize,
         labels=[0, 1, 2, 3, 4],
     )
-    test_dataset_1 = datasets.SplitMNIST(
+    test_dataset_1 = datasets.MNIST(
         train=False,
         scale=cfg.data.label_scale,
         size=cfg.data.test_size,
         normalize=cfg.data.normalize,
         labels=[0, 1, 2, 3, 4],
     )
-    train_dataset_2 = datasets.SplitMNIST(
+    train_dataset_2 = datasets.MNIST(
         train=True,
         scale=cfg.data.label_scale,
         size=cfg.data.train_size,
         normalize=cfg.data.normalize,
         labels=[5, 6, 7, 8, 9],
     )
-    test_dataset_2 = datasets.SplitMNIST(
+    test_dataset_2 = datasets.MNIST(
         train=False,
         scale=cfg.data.label_scale,
         size=cfg.data.test_size,
