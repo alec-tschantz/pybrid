@@ -28,14 +28,14 @@ def setup(cfg):
         scale=cfg.data.label_scale,
         size=cfg.data.train_size,
         normalize=cfg.data.normalize,
-        labels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        labels=[5, 6, 7, 8, 9],
     )
     test_dataset_2 = datasets.MNIST(
         train=False,
         scale=cfg.data.label_scale,
         size=cfg.data.test_size,
         normalize=cfg.data.normalize,
-        labels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        labels=[5, 6, 7, 8, 9],
     )
     train_loader_1 = datasets.get_dataloader(train_dataset_1, cfg.optim.batch_size)
     test_loader_1 = datasets.get_dataloader(test_dataset_1, cfg.optim.batch_size)
