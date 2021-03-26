@@ -95,7 +95,7 @@ def main(cfg):
         final_errs, init_errs = [], []
         while global_batch_id < cfg.exp.num_batches:
 
-            if global_batch_id % (cfg.exp.num_batches // 2) == 0:
+            if (global_batch_id % (cfg.exp.num_batches // 2) == 0) and global_batch_id > 0:
                 logging.info("Switched dataset")
                 train_loader = train_loader_2
                 test_loader = test_loader_2
