@@ -97,7 +97,7 @@ def main(cfg):
 
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
 
-                if global_batch_id == 1500:
+                if global_batch_id == cfg.exp.switch:
                     logging.info("Switched dataset")
                     train_loader = train_loader_2
                     test_loader = test_loader_2

@@ -11,7 +11,8 @@ default_cfg = {
         "test_hybrid": False,
         "test_pc": False,
         "test_amort": False,
-        "log_batch_every": 300
+        "log_batch_every": 300,
+        "switch": 2000
     },
     "data": {"train_size": None, "test_size": None, "label_scale": 0.94, "normalize": True},
     "infer": {
