@@ -95,12 +95,13 @@ def main(cfg):
         final_errs, init_errs = [], []
         while global_batch_id < cfg.exp.num_batches:
 
-            if global_batch_id == 1500:
-                logging.info("Switched dataset")
-                train_loader = train_loader_2
-                test_loader = test_loader_2
-
             for batch_id, (img_batch, label_batch) in enumerate(train_loader):
+
+                if global_batch_id == 1500:
+                    logging.info("Switched dataset")
+                    train_loader = train_loader_2
+                    test_loader = test_loader_2
+
                 global_batch_id = global_batch_id + 1
                 num_train_iter, avg_err = model.train_batch(
                     img_batch,
