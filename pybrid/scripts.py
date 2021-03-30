@@ -4,8 +4,13 @@ import torch
 from pybrid import utils, datasets, optim
 from pybrid.models.hybrid import HybridModel
 
+
 def setup(cfg):
     cfg = utils.setup_experiment(cfg)
+
+    test_batch_size = (
+        cfg.optim.batch_size if cfg.optim.test_batch_size is None else cfg.optim.test_batch_size
+    )
 
     datasets.download_mnist()
     train_dataset = datasets.MNIST(
@@ -21,7 +26,7 @@ def setup(cfg):
         normalize=cfg.data.normalize,
     )
     train_loader = datasets.get_dataloader(train_dataset, cfg.optim.batch_size)
-    test_loader = datasets.get_dataloader(test_dataset, cfg.optim.batch_size)
+    test_loader = datasets.get_dataloader(test_dataset, test_batch_size)
     logging.info(f"Loaded MNIST [train {len(train_loader)}] [test {len(test_loader)}]")
 
     model = HybridModel(
@@ -44,9 +49,10 @@ def setup(cfg):
     )
     return cfg, train_loader, test_loader, model, optimizer
 
+
 def main(cfg):
     cfg, train_loader, test_loader, model, optimizer = setup(cfg)
-    
+
     with torch.no_grad():
         metrics = utils.to_attr_dict(
             {
@@ -110,7 +116,13 @@ def main(cfg):
                     metrics.init_errs.append(sum(init_errs) / cfg.exp.batches_per_epoch)
 
                     logging.info(f"Test @ epoch {curr_epoch} [batch {global_batch_id}]")
-                    hybrid_acc, pc_acc, amort_acc, num_test_iters, num_test_iters_pc = 0, 0, 0, [], []
+                    hybrid_acc, pc_acc, amort_acc, num_test_iters, num_test_iters_pc = (
+                        0,
+                        0,
+                        0,
+                        [],
+                        [],
+                    )
                     for _, (img_batch, label_batch) in enumerate(test_loader):
 
                         if cfg.exp.test_hybrid:
@@ -156,7 +168,12 @@ def main(cfg):
                     utils.save_json(metrics, cfg.exp.log_dir + "/metrics.json")
                     logging.info(f"Saved metrics @ {cfg.exp.log_dir}/metrics.json")
 
-                    pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = [], [], [], [], []
+                    pc_losses, pc_errs, amort_losses, amort_errs, num_train_iters = (
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                    )
                     final_errs, init_errs = [], []
                     curr_epoch = curr_epoch + 1
-                

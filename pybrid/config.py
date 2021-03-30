@@ -38,6 +38,7 @@ default_cfg = {
         "lr": 1e-4,
         "amort_lr": 1e-4,
         "batch_size": 64,
+        "test_batch_size": None,
         "batch_scale": True,
         "grad_clip": 50,
         "weight_decay": None,
