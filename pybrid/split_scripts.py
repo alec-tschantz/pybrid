@@ -111,6 +111,7 @@ def main(cfg):
                     fixed_preds=cfg.infer.fixed_preds_train,
                     use_amort=cfg.model.train_amort,
                     thresh=cfg.infer.train_thresh,
+                    no_backward=cfg.infer.no_backward
                 )
 
                 optimizer.step(
