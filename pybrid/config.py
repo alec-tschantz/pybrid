@@ -24,6 +24,7 @@ default_cfg = {
         "train_thresh": None,
         "test_thresh": None,
         "init_std": 0.01,
+        "no_backward": False,
     },
     "model": {
         "nodes": [10, 500, 500, 784],
